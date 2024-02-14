@@ -14,6 +14,8 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Activate Python
-        run: conda activate guidance-311
+        run: |
+          source /opt/conda/etc/profile.d/conda.sh
+          conda activate guidance-311
       - name: Check python
         run: python --version
