@@ -14,6 +14,19 @@ RUN apt-get update && apt-get install -y curl jq && \
 COPY scripts/entrypoint.sh ./entrypoint.sh
 RUN chmod +x ./entrypoint.sh
 
+# Install conda
+# https://docs.conda.io/projects/conda/en/latest/user-guide/install/rpm-debian.html#
+COPY scripts/install_conda.sh ./install_conda.sh
+RUN chmod +x ./install_conda.sh
+RUN ./install_conda.sh
+
 USER runner
+
+# Set up the conda environment(s)
+RUN source /opt/conda/etc/profile.d/conda.sh
+
+COPY condaenvs/guidance-311.yaml /tmp/guidance-311.yaml
+RUN conda create --file /tmp/guidance-311.yaml
+
 
 ENTRYPOINT ["./entrypoint.sh"]

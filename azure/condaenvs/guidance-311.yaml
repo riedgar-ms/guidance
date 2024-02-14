@@ -1,0 +1,11 @@
+name: guidance-311
+channels:
+- defaults
+- conda-forge
+dependencies:
+- python==3.11
+- pip>=19.1.1
+- pytest
+- pip:
+    - datasets
+    - transformers
