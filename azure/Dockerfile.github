@@ -16,6 +16,7 @@ RUN chmod +x ./entrypoint.sh
 
 # Install conda
 # https://docs.conda.io/projects/conda/en/latest/user-guide/install/rpm-debian.html#
+RUN apt-get update && apt-get install -y gnupg
 COPY scripts/install_conda.sh ./install_conda.sh
 RUN chmod +x ./install_conda.sh
 RUN ./install_conda.sh
@@ -23,10 +24,8 @@ RUN ./install_conda.sh
 USER runner
 
 # Set up the conda environment(s)
-RUN source /opt/conda/etc/profile.d/conda.sh
-
 COPY condaenvs/guidance-311.yaml /tmp/guidance-311.yaml
-RUN conda create --file /tmp/guidance-311.yaml
-
+# Note '.' in 'sh' is the equivalent of 'source' in bash
+RUN . /opt/conda/etc/profile.d/conda.sh && conda env create --file /tmp/guidance-311.yaml --name guidance-311
 
 ENTRYPOINT ["./entrypoint.sh"]

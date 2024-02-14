@@ -12,5 +12,5 @@ echo "deb [arch=amd64 signed-by=/usr/share/keyrings/conda-archive-keyring.gpg] h
 
 
 # Now run apt
-apt update
-apt install conda
+apt-get update
+apt-get install -y conda
