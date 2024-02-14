@@ -8,4 +8,5 @@ dependencies:
 - pytest
 - pip:
     - datasets
+    - torch
     - transformers
