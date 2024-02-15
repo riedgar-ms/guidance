@@ -23,3 +23,10 @@ jobs:
           source /opt/conda/etc/profile.d/conda.sh
           conda activate guidance-311
           python -c "from transformers import pipeline, set_seed; generator = pipeline('text-generation', model='gpt2'); set_seed(42); generator('Hello, I am a language model,', max_length=30, num_return_sequences=5)"
+      - name: Install dependencies
+        run: |
+          pip install -e .[test]
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+      - name: Test with pytest
+        run: |
+          pytest --cov=guidance --cov-report=xml --cov-report=term-missing
