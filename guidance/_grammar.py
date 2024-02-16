@@ -717,6 +717,14 @@ class Select(GrammarFunction):
         out.recursive = data.recursive
         return out
 
+class Ref(Join):
+    def __init__(self, name: str | None = None):
+        super().__init__([], name=name)
+
+    def update(self, value: GrammarFunction):
+        self.values = [value]
+        return self
+
 def string(value) -> Union[str, bytes, Null, Byte, Join]:
     if isinstance(value, str):
         b = bytes(value, encoding="utf8")

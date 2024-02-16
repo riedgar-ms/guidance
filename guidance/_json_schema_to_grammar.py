@@ -1,7 +1,8 @@
 import json
+from collections.abc import MutableMapping
 from typing import Dict, List, Union
 
-from ._grammar import Byte, GrammarFunction, Join, Select, select
+from ._grammar import Byte, GrammarFunction, Join, Select, select, Ref
 from .library._char_range import char_range
 
 _QUOTE = Byte(b'"')
@@ -59,7 +60,7 @@ def _process_number() -> GrammarFunction:
 
 
 def _process_object(
-    schema_properties: Dict[str, any], definitions: Union[Dict[str, any], None]
+    schema_properties: Dict[str, any], refs: MutableMapping[str, Ref]
 ) -> GrammarFunction:
     properties = []
     for name, nxt_node in schema_properties.items():
@@ -67,7 +68,7 @@ def _process_object(
             [
                 Join([_QUOTE, name, _QUOTE]),
                 _COLON,
-                _process_node(nxt_node, definitions),
+                _process_node(nxt_node, refs),
             ]
         )
         properties.append(nxt)
@@ -77,7 +78,7 @@ def _process_object(
 
 
 def _process_array(
-    item_node: Dict[str, any], definitions: Union[Dict[str, any], None]
+    item_node: Dict[str, any], refs: MutableMapping[str, Ref]
 ) -> GrammarFunction:
     return Join(
         [
@@ -87,10 +88,10 @@ def _process_array(
                 Join(
                     [
                         select(
-                            ["", Join([_process_node(item_node, definitions), _COMMA])],
+                            ["", Join([_process_node(item_node, refs), _COMMA])],
                             recurse=True,
                         ),
-                        _process_node(item_node, definitions),
+                        _process_node(item_node, refs),
                     ]
                 )
             ),
@@ -99,36 +100,25 @@ def _process_array(
     )
 
 
-def _get_definition(reference: str, definitions: Dict[str, any]) -> Dict[str, any]:
-    assert definitions is not None
-    REF_START = "#/$defs/"
-    assert reference.startswith(
-        REF_START
-    ), f"Reference {reference} must start with {REF_START}"
-
-    target_name = reference[len(REF_START) :]
-    return definitions[target_name]
-
-
 def _process_anyOf(
-    options: List[Dict[str, any]], definitions: Dict[str, any]
+    options: List[Dict[str, any]], refs: MutableMapping[str, Ref]
 ) -> GrammarFunction:
     all_opts = []
     for opt in options:
-        all_opts.append(_process_node(opt, definitions))
+        all_opts.append(_process_node(opt, refs))
     return select(options=all_opts)
 
 
 def _process_node(
-    node: Dict[str, any], definitions: Union[Dict[str, any], None]
+    node: Dict[str, any], refs: MutableMapping[str, Ref]
 ) -> GrammarFunction:
     ANYOF_STRING = "anyOf"
     if ANYOF_STRING in node:
-        return _process_anyOf(node[ANYOF_STRING], definitions)
+        return _process_anyOf(node[ANYOF_STRING], refs)
 
     REF_STRING = "$ref"
     if REF_STRING in node:
-        node = _get_definition(node[REF_STRING], definitions)
+        return refs.setdefault(node[REF_STRING], Ref())
 
     if node["type"] == "null":
         # Not completely sure about this
@@ -142,15 +132,15 @@ def _process_node(
     elif node["type"] == "number":
         return _process_number()
     elif node["type"] == "object":
-        return _process_object(node["properties"], definitions)
+        return _process_object(node["properties"], refs)
     elif node["type"] == "array":
         if "type" in node["items"]:
             item_node = dict(type=node["items"]["type"])
             if item_node["type"] == "object":
                 item_node["properties"] = node["items"]["properties"]
         else:
-            item_node = _get_definition(node["items"][REF_STRING], definitions)
-        return _process_array(item_node, definitions)
+            item_node = node["items"]
+        return _process_array(item_node, refs)
     else:
         raise ValueError(f"Unsupported type in schema: {node['type']}")
 
@@ -158,12 +148,21 @@ def _process_node(
 def _json_schema_obj_to_grammar(schema_obj: Dict[str, any]) -> GrammarFunction:
     _DEFS_KEY = "$defs"
 
+    refs = {}
     definitions = None
     if _DEFS_KEY in schema_obj:
         definitions = schema_obj[_DEFS_KEY]
+        definitions = {f'#/{_DEFS_KEY}/{k}': _process_node(v, refs) for k,v in definitions.items()}
         del schema_obj[_DEFS_KEY]
-
-    return _process_node(schema_obj, definitions)
+    
+    node = _process_node(schema_obj, refs)
+    
+    if refs:
+        # Update refs
+        assert definitions is not None
+        for k,v in refs.items():
+            v.update(definitions[k])
+    return node
 
 
 def json_schema_to_grammar(schema: str) -> GrammarFunction:
