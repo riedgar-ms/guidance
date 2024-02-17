@@ -134,12 +134,7 @@ def _process_node(
     elif node["type"] == "object":
         return _process_object(node["properties"], refs)
     elif node["type"] == "array":
-        if "type" in node["items"]:
-            item_node = dict(type=node["items"]["type"])
-            if item_node["type"] == "object":
-                item_node["properties"] = node["items"]["properties"]
-        else:
-            item_node = node["items"]
+        item_node = node["items"]
         return _process_array(item_node, refs)
     else:
         raise ValueError(f"Unsupported type in schema: {node['type']}")
