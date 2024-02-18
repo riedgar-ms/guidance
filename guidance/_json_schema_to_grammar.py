@@ -57,10 +57,36 @@ def _process_number() -> GrammarFunction:
         ],
     )
 
-
 def _process_object(
-    schema_properties: Dict[str, any], definitions: Union[Dict[str, any], None]
+    schema_properties: Union[Dict[str, any], None],
+    additional_properties: Union[Dict[str, any], None],
+    definitions: Union[Dict[str, any], None]
 ) -> GrammarFunction:
+    properties = []
+    additional = None
+
+    if schema_properties:
+        properties = _process_properties(
+            schema_properties,
+            definitions
+        )
+    if additional_properties:
+        additional = _process_additional_properties(
+            additional_properties,
+            definitions
+        )
+    if properties and additional is None:
+        return Join([_OPEN_BRACE, *properties, _CLOSE_BRACE])
+    if properties and additional is not None:
+        return Join([_OPEN_BRACE, *properties, _make_optional(Join([_COMMA, additional])), _CLOSE_BRACE])
+    if not properties and additional is not None:
+        return Join([_OPEN_BRACE, _make_optional(additional), _CLOSE_BRACE])
+    return Join([_OPEN_BRACE, _CLOSE_BRACE])
+
+def _process_properties(
+    schema_properties: Dict[str, any],
+    definitions: Union[Dict[str, any], None]
+):
     properties = []
     for name, nxt_node in schema_properties.items():
         nxt = Join(
@@ -73,8 +99,22 @@ def _process_object(
         properties.append(nxt)
         if len(properties) < len(schema_properties):
             properties.append(_COMMA)
-    return Join([_OPEN_BRACE, *properties, _CLOSE_BRACE])
+    return properties
 
+def _process_additional_properties(
+    additional_properties: Dict[str, any],
+    definitions: Union[Dict[str, any], None]
+):
+    s = Select([], recursive=True)
+    nxt = Join(
+        [
+            Join([_QUOTE, _SAFE_STRING, _QUOTE]),
+            _COLON,
+            _process_node(additional_properties, definitions),
+        ]
+    )
+    s.values = [nxt, Join([nxt, _COMMA, s])]
+    return s
 
 def _process_array(
     item_node: Dict[str, any], definitions: Union[Dict[str, any], None]
@@ -142,7 +182,11 @@ def _process_node(
     elif node["type"] == "number":
         return _process_number()
     elif node["type"] == "object":
-        return _process_object(node["properties"], definitions)
+        return _process_object(
+            node.get("properties"),
+            node.get("additionalProperties"),
+            definitions
+        )
     elif node["type"] == "array":
         if "type" in node["items"]:
             item_node = dict(type=node["items"]["type"])
