@@ -13,3 +13,11 @@ def pydantic_model_to_grammar(
     json_schema = model.model_json_schema()
 
     return _json_schema_obj_to_grammar(json_schema)
+
+def type_to_grammar(
+    type: type | pydantic.BaseModel | None
+) -> GrammarFunction:
+    adapter = pydantic.TypeAdapter(type)
+    json_schema = adapter.json_schema()
+
+    return _json_schema_obj_to_grammar(json_schema)
