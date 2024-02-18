@@ -109,8 +109,13 @@ def test_dict():
     check_object_with_grammar({'a': 1, 'b': 2}, grammar)
     with pytest.raises(ParserException):
         check_object_with_grammar({'a': '1', 'b': '2'}, grammar)
-    with pytest.raises(ParserException):
-        check_object_with_grammar({1: 1, 2: 2}, grammar)
+
+
+def test_dict_nonstring_keys():
+    # TODO: think about this a bit more -- nonstring keys aren't valid JSON
+    type = dict[int, str]
+    grammar = type_to_grammar(type)
+    check_object_with_grammar({1: 'a', 2: 'b'}, grammar)
 
 
 def test_list_of_models():
