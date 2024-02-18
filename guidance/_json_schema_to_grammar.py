@@ -1,5 +1,5 @@
 import json
-from typing import Dict, List, Union
+from typing import Dict, List, Union, Any
 
 from ._grammar import Byte, GrammarFunction, Join, Select, select
 from .library._char_range import char_range
@@ -58,9 +58,9 @@ def _process_number() -> GrammarFunction:
     )
 
 def _process_object(
-    schema_properties: Union[Dict[str, any], None],
-    additional_properties: Union[Dict[str, any], None],
-    definitions: Union[Dict[str, any], None]
+    schema_properties: Union[Dict[str, Any], None],
+    additional_properties: Union[Dict[str, Any], None],
+    definitions: Union[Dict[str, Any], None]
 ) -> GrammarFunction:
     properties = []
     additional = None
@@ -84,8 +84,8 @@ def _process_object(
     return Join([_OPEN_BRACE, _CLOSE_BRACE])
 
 def _process_properties(
-    schema_properties: Dict[str, any],
-    definitions: Union[Dict[str, any], None]
+    schema_properties: Dict[str, Any],
+    definitions: Union[Dict[str, Any], None]
 ):
     properties = []
     for name, nxt_node in schema_properties.items():
@@ -102,8 +102,8 @@ def _process_properties(
     return properties
 
 def _process_additional_properties(
-    additional_properties: Dict[str, any],
-    definitions: Union[Dict[str, any], None]
+    additional_properties: Dict[str, Any],
+    definitions: Union[Dict[str, Any], None]
 ):
     s = Select([], recursive=True)
     nxt = Join(
@@ -117,7 +117,7 @@ def _process_additional_properties(
     return s
 
 def _process_array(
-    item_node: Dict[str, any], definitions: Union[Dict[str, any], None]
+    item_node: Dict[str, Any], definitions: Union[Dict[str, Any], None]
 ) -> GrammarFunction:
     return Join(
         [
@@ -139,7 +139,7 @@ def _process_array(
     )
 
 
-def _get_definition(reference: str, definitions: Dict[str, any]) -> Dict[str, any]:
+def _get_definition(reference: str, definitions: Dict[str, Any]) -> Dict[str, Any]:
     assert definitions is not None
     REF_START = "#/$defs/"
     assert reference.startswith(
@@ -151,7 +151,7 @@ def _get_definition(reference: str, definitions: Dict[str, any]) -> Dict[str, an
 
 
 def _process_anyOf(
-    options: List[Dict[str, any]], definitions: Dict[str, any]
+    options: List[Dict[str, Any]], definitions: Dict[str, Any]
 ) -> GrammarFunction:
     all_opts = []
     for opt in options:
@@ -160,7 +160,7 @@ def _process_anyOf(
 
 
 def _process_node(
-    node: Dict[str, any], definitions: Union[Dict[str, any], None]
+    node: Dict[str, Any], definitions: Union[Dict[str, Any], None]
 ) -> GrammarFunction:
     ANYOF_STRING = "anyOf"
     if ANYOF_STRING in node:
@@ -199,7 +199,7 @@ def _process_node(
         raise ValueError(f"Unsupported type in schema: {node['type']}")
 
 
-def _json_schema_obj_to_grammar(schema_obj: Dict[str, any]) -> GrammarFunction:
+def _json_schema_obj_to_grammar(schema_obj: Dict[str, Any]) -> GrammarFunction:
     _DEFS_KEY = "$defs"
 
     definitions = None
