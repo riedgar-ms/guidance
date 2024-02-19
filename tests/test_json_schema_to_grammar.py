@@ -577,6 +577,66 @@ def test_anyOf_objects(target_obj):
     target_string = to_compact_json(target_obj)
     check_string_with_grammar(target_string, grammar)
 
+@pytest.mark.parametrize("target_obj", [{}, {'a': 1}, {'a':1, 'b':2}])
+def test_simple_additional_properties(target_obj):
+    schema = """{
+    "type": "object",
+    "additionalProperties": {
+            "type" : "integer"
+        }
+    }
+"""
+    # First sanity check what we're setting up
+    schema_obj = json.loads(schema)
+    validate(instance=target_obj, schema=schema_obj)
+
+    grammar = json_schema_to_grammar(schema)
+
+    target_string = to_compact_json(target_obj)
+    check_string_with_grammar(target_string, grammar)
+
+@pytest.mark.parametrize("target_obj", [{}, {'a': 1}, {'a': '2'}, {'a':1, 'b':'2'}])
+def test_anyOf_additional_properties(target_obj):
+    schema = """{
+    "type": "object",
+    "additionalProperties": {
+            "anyOf": [
+                {"type" : "string"},
+                {"type": "integer"}
+            ]
+        }
+    }
+"""
+    # First sanity check what we're setting up
+    schema_obj = json.loads(schema)
+    validate(instance=target_obj, schema=schema_obj)
+
+    grammar = json_schema_to_grammar(schema)
+
+    target_string = to_compact_json(target_obj)
+    check_string_with_grammar(target_string, grammar)
+
+@pytest.mark.parametrize("target_obj", [{'mystr': 'hello'}, {'mystr': 'hello', 'a': 1}, {'mystr': 'hello', 'a':1, 'b':2}])
+def test_properties_and_additional_properties(target_obj):
+    schema = """{
+    "type": "object",
+    "properties": {
+        "mystr": {"type": "string"}
+    },
+    "additionalProperties": {
+        "type": "integer"
+    }
+}
+"""
+    # First sanity check what we're setting up
+    schema_obj = json.loads(schema)
+    validate(instance=target_obj, schema=schema_obj)
+
+    grammar = json_schema_to_grammar(schema)
+
+    target_string = to_compact_json(target_obj)
+    check_string_with_grammar(target_string, grammar)
+
 
 def test_with_mock_model():
     schema = """{
