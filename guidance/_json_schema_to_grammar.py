@@ -158,6 +158,14 @@ def _process_anyOf(
         all_opts.append(_process_node(opt, definitions))
     return select(options=all_opts)
 
+def _process_enum(options: list[Any]):
+    # Should we narrow type annotation or use compact json.dumps?
+    all_opts = []
+    for opt in options:
+        all_opts.append(
+            json.dumps(opt)
+        )
+    return select(options=all_opts)
 
 def _process_node(
     node: Dict[str, Any], definitions: Union[Dict[str, Any], None]
@@ -170,6 +178,8 @@ def _process_node(
     if REF_STRING in node:
         node = _get_definition(node[REF_STRING], definitions)
 
+    if "enum" in node:
+        return _process_enum(node["enum"])
     if node["type"] == "null":
         # Not completely sure about this
         return Select(["null"])

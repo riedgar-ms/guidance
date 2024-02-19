@@ -1,7 +1,7 @@
 import json
 
 import pytest
-from jsonschema import validate
+from jsonschema import validate, ValidationError
 
 from guidance import models
 from guidance._grammar import GrammarFunction
@@ -637,6 +637,37 @@ def test_properties_and_additional_properties(target_obj):
     target_string = to_compact_json(target_obj)
     check_string_with_grammar(target_string, grammar)
 
+@pytest.mark.parametrize("target_obj", [1,"2",3])
+def test_enum(target_obj):
+    schema = """{
+    "enum": [1,"2",3]
+}
+"""
+    # First sanity check what we're setting up
+    schema_obj = json.loads(schema)
+    validate(instance=target_obj, schema=schema_obj)
+
+    grammar = json_schema_to_grammar(schema)
+
+    target_string = to_compact_json(target_obj)
+    check_string_with_grammar(target_string, grammar)
+
+@pytest.mark.parametrize("target_obj", [4, '5', True])
+def test_enum_negative_examples(target_obj):
+    schema = """{
+    "enum": [1,"2",3]
+}
+"""
+    # First sanity check what we're setting up
+    schema_obj = json.loads(schema)
+    with pytest.raises(ValidationError):
+        validate(instance=target_obj, schema=schema_obj)
+
+    grammar = json_schema_to_grammar(schema)
+
+    target_string = to_compact_json(target_obj)
+    with pytest.raises(ParserException):
+        check_string_with_grammar(target_string, grammar)
 
 def test_with_mock_model():
     schema = """{

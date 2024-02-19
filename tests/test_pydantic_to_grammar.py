@@ -1,4 +1,5 @@
-from typing import List, Union
+from typing import List, Union, Literal
+from enum import Enum
 
 import json
 import pydantic
@@ -136,3 +137,19 @@ def test_type_to_grammar_on_model():
     grammar = type_to_grammar(Simple)
     obj = Simple(my_string='hello')
     check_object_with_grammar(obj, grammar)
+
+@pytest.mark.parametrize('target_obj', [True, 2, 'Three'])
+def test_enum(target_obj):
+    class MyEnum(Enum):
+        a = True
+        b = 2
+        c = 'Three'
+
+    grammar = type_to_grammar(MyEnum)
+    check_object_with_grammar(target_obj, grammar)
+
+@pytest.mark.parametrize('target_obj', [True, 2, 'Three'])
+def test_literal(target_obj):
+    type = Literal[True, 2, 'Three']
+    grammar = type_to_grammar(type)
+    check_object_with_grammar(target_obj, grammar)
