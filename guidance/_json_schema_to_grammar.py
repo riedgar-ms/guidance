@@ -1,10 +1,10 @@
 import json
 from typing import Dict, List, Union
 
-from ._grammar import Byte, GrammarFunction, Join, Select, select
+import guidance
 from .library._char_range import char_range
+from .library import select, optional, zero_or_more, one_or_more
 
-_QUOTE = Byte(b'"')
 _SAFE_STRING = select(
     [
         char_range("a", "z"),
@@ -17,86 +17,53 @@ _SAFE_STRING = select(
     ],
     recurse=True,
 )
-_OPEN_BRACE = Byte(b"{")
-_CLOSE_BRACE = Byte(b"}")
-_OPEN_BRACKET = Byte(b"[")
-_CLOSE_BRACKET = Byte(b"]")
-_COMMA = Byte(b",")
-_COLON = Byte(b":")
 
+@guidance(stateless=True)
+def json_string(lm):
+    return lm + '"' + _SAFE_STRING + '"'
 
-def _make_optional(f: GrammarFunction) -> GrammarFunction:
-    return select(["", f])
+@guidance(stateless=True)
+def json_integer(lm):
+    return lm + select(["-", ""]) + one_or_more(char_range("0", "9"))
 
+@guidance(stateless=True)
+def json_number(lm):
+    mantissa_int = json_integer()
+    mantissa_frac = "." + one_or_more(char_range("0", "9"))
+    exponent = "e" + select(["", "-", "+"]) + one_or_more(char_range("0", "9"))
+    return lm + mantissa_int + optional(mantissa_frac) + optional(exponent)
 
-def _process_int() -> GrammarFunction:
-    return Join([select(["-", ""]), select([char_range("0", "9")], recurse=True)])
+@guidance(stateless=True)
+def json_object(
+    lm, schema_properties: Dict[str, any], definitions: Union[Dict[str, any], None]
+):
+    lm += "{"
+    items = list(schema_properties.items())
+    for i, (name, nxt_node) in enumerate(items):
+        lm += f'"{name}":' + json_node(nxt_node, definitions)
+        if i < len(items) - 1:
+            lm += ','
+    lm += '}'
+    return lm
 
-
-def _process_number() -> GrammarFunction:
-    mantissa_int = _process_int()
-    mantissa_frac = _make_optional(
-        Join([Byte(b"."), select([char_range("0", "9")], recurse=True)])
+@guidance(stateless=True)
+def json_array(
+    lm, item_node: Dict[str, any], definitions: Union[Dict[str, any], None]
+):
+    inner = optional(
+        zero_or_more(json_node(item_node, definitions) + ",")
+        + json_node(item_node, definitions)
     )
-    exponent = _make_optional(
-        Join(
-            [
-                "e",
-                # Since the exponent can contain a '+', can't just reuse
-                # _process_int() here
-                select(["", "-", "+"]),
-                select([char_range("0", "9")], recurse=True),
-            ]
-        )
-    )
-    return Join(
-        [
-            mantissa_int,
-            mantissa_frac,
-            exponent,
-        ],
-    )
+    return lm + "[" + inner + "]"
 
-
-def _process_object(
-    schema_properties: Dict[str, any], definitions: Union[Dict[str, any], None]
-) -> GrammarFunction:
-    properties = []
-    for name, nxt_node in schema_properties.items():
-        nxt = Join(
-            [
-                Join([_QUOTE, name, _QUOTE]),
-                _COLON,
-                _process_node(nxt_node, definitions),
-                _COMMA if len(properties) + 1 < len(schema_properties) else "",
-            ]
-        )
-        properties.append(nxt)
-    return Join([_OPEN_BRACE, *properties, _CLOSE_BRACE])
-
-
-def _process_array(
-    item_node: Dict[str, any], definitions: Union[Dict[str, any], None]
-) -> GrammarFunction:
-    return Join(
-        [
-            _OPEN_BRACKET,
-            _make_optional(
-                # One or more items
-                Join(
-                    [
-                        select(
-                            ["", Join([_process_node(item_node, definitions), _COMMA])],
-                            recurse=True,
-                        ),
-                        _process_node(item_node, definitions),
-                    ]
-                )
-            ),
-            _CLOSE_BRACKET,
-        ]
-    )
-
+@guidance(stateless=True)
+def json_anyOf(
+    lm, options: List[Dict[str, any]], definitions: Dict[str, any]
+):
+    all_opts = []
+    for opt in options:
+        all_opts.append(json_node(opt, definitions))
+    return lm + select(options=all_opts)
 
 def _get_definition(reference: str, definitions: Dict[str, any]) -> Dict[str, any]:
     assert definitions is not None
@@ -108,64 +75,46 @@ def _get_definition(reference: str, definitions: Dict[str, any]) -> Dict[str, an
     target_name = reference[len(REF_START) :]
     return definitions[target_name]
 
-
-def _process_anyOf(
-    options: List[Dict[str, any]], definitions: Dict[str, any]
-) -> GrammarFunction:
-    all_opts = []
-    for opt in options:
-        all_opts.append(_process_node(opt, definitions))
-    return select(options=all_opts)
-
-
-def _process_node(
-    node: Dict[str, any], definitions: Union[Dict[str, any], None]
-) -> GrammarFunction:
+@guidance(stateless=True)
+def json_node(
+    lm, node: Dict[str, any], definitions: Union[Dict[str, any], None]
+):
     ANYOF_STRING = "anyOf"
     if ANYOF_STRING in node:
-        return _process_anyOf(node[ANYOF_STRING], definitions)
+        return lm + json_anyOf(node[ANYOF_STRING], definitions)
 
     REF_STRING = "$ref"
     if REF_STRING in node:
         node = _get_definition(node[REF_STRING], definitions)
 
     if node["type"] == "null":
-        # Not completely sure about this
-        return Select(["null"])
+        return lm + "null"
     elif node["type"] == "string":
-        return Join([_QUOTE, _SAFE_STRING, _QUOTE])
+        return lm + json_string()
     elif node["type"] == "boolean":
-        return select(["true", "false"])
+        return lm + select(["true", "false"])
     elif node["type"] == "integer":
-        return _process_int()
+        return lm + json_integer()
     elif node["type"] == "number":
-        return _process_number()
+        return lm + json_number()
     elif node["type"] == "object":
-        return _process_object(node["properties"], definitions)
+        return lm + json_object(node["properties"], definitions)
     elif node["type"] == "array":
-        if "type" in node["items"]:
-            item_node = dict(type=node["items"]["type"])
-            if item_node["type"] == "object":
-                item_node["properties"] = node["items"]["properties"]
-        else:
-            item_node = _get_definition(node["items"][REF_STRING], definitions)
-        return _process_array(item_node, definitions)
+        return lm + json_array(node["items"], definitions)
     else:
         raise ValueError(f"Unsupported type in schema: {node['type']}")
 
 
-def _json_schema_obj_to_grammar(schema_obj: Dict[str, any]) -> GrammarFunction:
+@guidance(stateless=True)
+def json_schema_to_grammar(lm, schema: str | Dict[str, any]):
+    if isinstance(schema, str):
+        schema = json.loads(schema)
+        
     _DEFS_KEY = "$defs"
 
     definitions = None
-    if _DEFS_KEY in schema_obj:
-        definitions = schema_obj[_DEFS_KEY]
-        del schema_obj[_DEFS_KEY]
+    if _DEFS_KEY in schema:
+        definitions = schema[_DEFS_KEY]
+        del schema[_DEFS_KEY]
 
-    return _process_node(schema_obj, definitions)
-
-
-def json_schema_to_grammar(schema: str) -> GrammarFunction:
-    schema_obj = json.loads(schema)
-
-    return _json_schema_obj_to_grammar(schema_obj)
+    return lm + json_node(schema, definitions)

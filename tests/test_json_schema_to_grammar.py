@@ -8,7 +8,6 @@ from guidance._grammar import GrammarFunction
 from guidance._json_schema_to_grammar import json_schema_to_grammar
 from guidance._parser import ParserException
 
-
 def to_compact_json(target: any) -> str:
     # See 'Compact Encoding':
     # https://docs.python.org/3/library/json.html
