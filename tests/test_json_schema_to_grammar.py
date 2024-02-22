@@ -540,6 +540,60 @@ def test_nested_ref():
     check_string_with_grammar(target_string, grammar)
 
 
+@pytest.mark.parametrize(
+    "target_obj",
+    [
+        dict(linked_list=dict(value=1, next=None)),
+        dict(linked_list=dict(value=1, next=dict(value=2, next=None))),
+        dict(linked_list=dict(value=1, next=dict(value=2, next=dict(value=3, next=None)))),
+    ],
+)
+def test_recursive_ref(target_obj):
+    schema = """{
+  "$defs": {
+    "LinkedList": {
+      "properties": {
+        "value": {
+          "title": "Value",
+          "type": "integer"
+        },
+        "next": {
+          "anyOf": [
+            {"$ref": "#/$defs/LinkedList"},
+            {"type": "null"}
+          ]
+        }
+      },
+      "required": [
+        "value",
+        "next"
+      ],
+      "title": "LinkedList",
+      "type": "object"
+    }
+  },
+  "properties": {
+    "linked_list": {
+      "$ref": "#/$defs/LinkedList"
+    }
+  },
+  "required": [
+    "linked_list"
+  ],
+  "title": "ALinkedList",
+  "type": "object"
+}
+"""
+    # First sanity check what we're setting up
+    schema_obj = json.loads(schema)
+    validate(instance=target_obj, schema=schema_obj)
+
+    grammar = json_schema_to_grammar(schema)
+
+    target_string = to_compact_json(target_obj)
+    check_string_with_grammar(target_string, grammar)
+
+
 @pytest.mark.parametrize("target_obj", [123, True])
 def test_anyOf_simple(target_obj):
     schema = """{
