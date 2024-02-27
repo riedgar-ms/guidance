@@ -156,7 +156,7 @@ def _gen_json(
     return lm + result
 
 @guidance(stateless=True)
-def gen_json(lm, json_schema: Mapping[str, Any], name:str|None=None):
+def gen_json(lm, json_schema: Mapping[str, Any], name: Optional[str] = None):
     _DEFS_KEY = "$defs"
     definitions = {}
     if _DEFS_KEY in json_schema:
