@@ -169,15 +169,12 @@ def gen_json(lm, json_schema: Mapping[str, Any], name: Optional[str] = None):
 
 def _build_definitions(raw_definitions: Mapping[str, Any]) -> Mapping[str, Callable[[], GrammarFunction]]:
     definitions = {}
-    for ref, schema in raw_definitions.items():
-        definitions[ref] = _build_definition(schema, definitions)
-    return definitions
 
-def _build_definition(
-        json_schema: Mapping[str, Any],
-        definitions: Mapping[str, Callable[[], GrammarFunction]]
-) -> Callable[[], GrammarFunction]:
-    @guidance(stateless=True, dedent=False)
-    def closure(lm):
-        return lm + _gen_json(json_schema=json_schema, definitions=definitions)
-    return closure
+    def build_definition(json_schema: Mapping[str, Any]) -> Callable[[], GrammarFunction]:
+        @guidance(stateless=True, dedent=False)
+        def closure(lm):
+            return lm + _gen_json(json_schema=json_schema, definitions=definitions)
+        return closure
+
+    definitions = {ref: build_definition(schema) for ref, schema in raw_definitions.items()}
+    return definitions
