@@ -9,7 +9,7 @@ from .._grammar import select, GrammarFunction
 @guidance(stateless=True)
 def _get_definition(
     lm, reference: str, definitions: Mapping[str, Callable[[], GrammarFunction]],
-) -> Mapping[str, any]:
+):
     assert definitions is not None
     REF_START = "#/$defs/"
     assert reference.startswith(
