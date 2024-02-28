@@ -7,20 +7,6 @@ from .._grammar import select, GrammarFunction
 
 
 @guidance(stateless=True)
-def _get_definition(
-    lm, reference: str, definitions: Mapping[str, Callable[[], GrammarFunction]],
-):
-    assert definitions is not None
-    REF_START = "#/$defs/"
-    assert reference.startswith(
-        REF_START
-    ), f"Reference {reference} must start with {REF_START}"
-
-    target_name = reference[len(REF_START) :]
-    definition = definitions[target_name]
-    return lm + definition()
-
-@guidance(stateless=True)
 def _gen_json_int(lm):
     return lm + optional("-") + one_or_more(char_range("0", "9"))
 
@@ -155,6 +141,7 @@ def _gen_json(
 
     return lm + result
 
+
 @guidance(stateless=True)
 def gen_json(lm, json_schema: Mapping[str, Any], name: Optional[str] = None):
     _DEFS_KEY = "$defs"
@@ -167,6 +154,7 @@ def gen_json(lm, json_schema: Mapping[str, Any], name: Optional[str] = None):
         name=name
     )
 
+
 def _build_definitions(raw_definitions: Mapping[str, Any]) -> Mapping[str, Callable[[], GrammarFunction]]:
     definitions = {}
 
@@ -178,3 +166,18 @@ def _build_definitions(raw_definitions: Mapping[str, Any]) -> Mapping[str, Calla
 
     definitions = {ref: build_definition(schema) for ref, schema in raw_definitions.items()}
     return definitions
+
+
+@guidance(stateless=True)
+def _get_definition(
+    lm, reference: str, definitions: Mapping[str, Callable[[], GrammarFunction]],
+):
+    assert definitions is not None
+    REF_START = "#/$defs/"
+    assert reference.startswith(
+        REF_START
+    ), f"Reference {reference} must start with {REF_START}"
+
+    target_name = reference[len(REF_START) :]
+    definition = definitions[target_name]
+    return lm + definition()
