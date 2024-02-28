@@ -176,7 +176,7 @@ def build_definitions(raw_definitions: Mapping[str, Any]) -> Mapping[str, Callab
 def _build_definition(
         json_schema: Mapping[str, Any],
         definitions: Mapping[str, Callable[[], GrammarFunction]]
-) -> Mapping[str, Callable[[], GrammarFunction]]:
+) -> Callable[[], GrammarFunction]:
     @guidance(stateless=True, dedent=False)
     def closure(lm):
         return lm + _gen_json(json_schema=json_schema, definitions=definitions)
