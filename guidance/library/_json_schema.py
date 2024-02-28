@@ -160,14 +160,14 @@ def gen_json(lm, json_schema: Mapping[str, Any], name: Optional[str] = None):
     _DEFS_KEY = "$defs"
     definitions = {}
     if _DEFS_KEY in json_schema:
-        definitions = build_definitions(json_schema[_DEFS_KEY])
+        definitions = _build_definitions(json_schema[_DEFS_KEY])
 
     return lm + guidance.capture(
         _gen_json(json_schema, definitions),
         name=name
     )
 
-def build_definitions(raw_definitions: Mapping[str, Any]) -> Mapping[str, Callable[[], GrammarFunction]]:
+def _build_definitions(raw_definitions: Mapping[str, Any]) -> Mapping[str, Callable[[], GrammarFunction]]:
     definitions = {}
     for ref, schema in raw_definitions.items():
         definitions[ref] = _build_definition(schema, definitions)
