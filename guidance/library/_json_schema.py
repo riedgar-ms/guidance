@@ -1,4 +1,4 @@
-from typing import Any, Mapping, MutableMapping, Sequence, Union, Callable
+from typing import Any, Mapping, MutableMapping, Sequence, Optional, Callable
 
 import guidance
 from guidance.library import char_range, one_or_more, optional, zero_or_more
