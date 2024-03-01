@@ -19,8 +19,6 @@ jobs:
         run: |
           cat /proc/cpuinfo
           echo "============================"
-          cat /proc/pciinfo
-          echo "============================"
           cat /proc/meminfo
       - name: Activate Python
         run: |
