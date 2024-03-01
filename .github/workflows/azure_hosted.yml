@@ -1,6 +1,6 @@
 name: Self Hosted Tests
 
-# Edit to kick builds
+# Edit to kick builds!
 
 on:
   push:
