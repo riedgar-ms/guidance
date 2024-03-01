@@ -19,7 +19,7 @@ jobs:
         run: |
           cat /proc/cpuinfo
           echo "============================"
-          lspci
+          cat /proc/pciinfo
           echo "============================"
           cat /proc/meminfo
       - name: Activate Python
