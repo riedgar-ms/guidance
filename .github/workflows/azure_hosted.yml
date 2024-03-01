@@ -15,6 +15,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+      - name: Check System Info
+        run: |
+          cat /proc/cpuinfo
+          echo "============================"
+          lspci
+          echo "============================"
+          cat /proc/meminfo
       - name: Activate Python
         run: |
           source /opt/conda/etc/profile.d/conda.sh
