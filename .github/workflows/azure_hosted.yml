@@ -1,5 +1,7 @@
 name: Self Hosted Tests
 
+# Edit to kick builds
+
 on:
   push:
     branches: [main]
