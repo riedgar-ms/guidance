@@ -48,7 +48,7 @@ jobs:
       - name: Show HF caches?
         run: |
           pwd
-          ls -R ~/.caches
+          ls -R ~/.cache/
       - name: Install dependencies
         run: |
           source /opt/conda/etc/profile.d/conda.sh
