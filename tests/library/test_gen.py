@@ -121,7 +121,7 @@ def test_empty_pattern():
     assert lm2['test'] == ''
 
 def test_various_regexes():
-    lm = get_model("transformers:gpt2")
+    lm = get_model("transformers:gpt2", device=0)
     prompts = ['Hi there', '2 + 2 = ', 'Scott is a', 'I have never seen a more', 'What is the', '?FD32']
     patterns = ['(Scott is a person|Scott is a persimmon)', r'Scott is a persimmon.*\.', r'\d\.*\d+']
     for prompt in prompts:
@@ -134,7 +134,7 @@ def test_various_regexes():
 #     assert str(lm) == "hey there my friend what is truth 23+43=dog"
 
 def test_long_prompt():
-    lm = get_model("transformers:gpt2")
+    lm = get_model("transformers:gpt2", device=0)
     prompt = '''Question: Legoland has 5 kangaroos for each koala. If Legoland has 180 kangaroos, how many koalas and kangaroos are there altogether?
 Let's think step by step, and then write the answer:
 Step 1: For every 5 kangaroos, there is one koala, meaning for the 180 kangaroos, there are 180/5 = 36 koalas.
