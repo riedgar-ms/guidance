@@ -20,6 +20,8 @@ jobs:
           cat /proc/cpuinfo
           echo "============================"
           cat /proc/meminfo
+          echo "============================"
+          lspci
       - name: Activate Python
         run: |
           source /opt/conda/etc/profile.d/conda.sh

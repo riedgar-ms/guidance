@@ -11,6 +11,8 @@ RUN apt-get update && apt-get install -y curl jq && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
+RUN apt-get update && apt-get install -y pciutils
+
 # Make sure we have compilers etc.
 RUN apt-get update && apt-get install -y build-essential
 
@@ -19,11 +21,17 @@ RUN chmod +x ./entrypoint.sh
 
 # Install conda
 # https://docs.conda.io/projects/conda/en/latest/user-guide/install/rpm-debian.html#
-RUN apt-get update && apt-get install -y gnupg
+# RUN apt-get update && apt-get install -y gnupg
 # Note '.' in 'sh' is the equivalent of 'source' in bash
-RUN . ./install_conda.sh
+# RUN . ./install_conda.sh
+
+COPY --from=continuumio/miniconda3:24.1.2-0 /opt/conda /opt/conda
 
 USER runner
+
+ENV PATH=/opt/conda/bin:$PATH
+
+
 
 # Set up the conda environment(s)
 COPY condaenvs/guidance-311.yaml /tmp/guidance-311.yaml
