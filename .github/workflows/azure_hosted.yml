@@ -21,6 +21,7 @@ jobs:
           echo "============================"
           cat /proc/meminfo
           echo "============================"
+          which lspci
           lspci
       - name: Activate Python
         run: |
