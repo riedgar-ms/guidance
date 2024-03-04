@@ -46,7 +46,9 @@ jobs:
       - name: Show c++
         run: c++ --version
       - name: Show HF caches?
-        run: ls -R
+        run: |
+          pwd
+          ls -R ~/.caches
       - name: Install dependencies
         run: |
           source /opt/conda/etc/profile.d/conda.sh
