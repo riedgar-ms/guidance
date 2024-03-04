@@ -29,6 +29,8 @@ jobs:
           python --version
       - name: Show HF caches?
         run: |
+          source /opt/conda/etc/profile.d/conda.sh
+          conda activate guidance-311
           huggingface-cli scan-cache -v
       - name: Try GPT-2
         run: |
@@ -50,6 +52,8 @@ jobs:
         run: c++ --version
       - name: Show HF caches?
         run: |
+          source /opt/conda/etc/profile.d/conda.sh
+          conda activate guidance-311
           huggingface-cli scan-cache -v
       - name: Install dependencies
         run: |
