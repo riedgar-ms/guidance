@@ -36,8 +36,8 @@ jobs:
         run: |
           source /opt/conda/etc/profile.d/conda.sh
           conda activate guidance-311
-          python -c "import torch; torch.cuda.is_available()"
-          python -c "import torch; torch.cuda.get_device_name(0)"
+          python -c "import torch; print(torch.cuda.is_available())"
+          python -c "import torch; print(torch.cuda.get_device_name(0))"
       - name: Show c++
         run: c++ --version
       - name: Install dependencies
