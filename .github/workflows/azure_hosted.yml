@@ -27,6 +27,8 @@ jobs:
           source /opt/conda/etc/profile.d/conda.sh
           conda activate guidance-311
           python --version
+          echo "==========="
+          pip freeze
       - name: Show HF caches?
         run: |
           source /opt/conda/etc/profile.d/conda.sh
