@@ -21,7 +21,7 @@ jobs:
           echo "============================"
           # cat /proc/meminfo
           echo "============================"
-          /usr/bin/lspci
+          nvidia-smi
       - name: Activate Python
         run: |
           source /opt/conda/etc/profile.d/conda.sh
