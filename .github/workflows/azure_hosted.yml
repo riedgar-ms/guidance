@@ -17,9 +17,9 @@ jobs:
       - uses: actions/checkout@v3
       - name: Check System Info
         run: |
-          # cat /proc/cpuinfo
+          cat /proc/cpuinfo
           echo "============================"
-          # cat /proc/meminfo
+          cat /proc/meminfo
           echo "============================"
           nvidia-smi
       - name: Activate Python
@@ -27,6 +27,9 @@ jobs:
           source /opt/conda/etc/profile.d/conda.sh
           conda activate guidance-311
           python --version
+      - name: Show HF caches?
+        run: |
+          huggingface-cli scan-cache -v
       - name: Try GPT-2
         run: |
           source /opt/conda/etc/profile.d/conda.sh

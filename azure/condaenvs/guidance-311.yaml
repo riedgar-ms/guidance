@@ -8,6 +8,6 @@ dependencies:
 - pytest
 - pip:
     - datasets
-    - huggingface_hub
+    - huggingface_hub[cli]
     - torch
     - transformers
