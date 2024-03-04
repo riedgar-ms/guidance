@@ -1,6 +1,7 @@
-from huggingface_hub import snapshot_download
+from huggingface_hub import snapshot_download, __version__
 
 if __name__ == "__main__":
+    print(f"huggingface_hub version: {__version__}")
     path = snapshot_download(repo_id="gpt2")
     print(f"Downloaded to {path}")
     path = snapshot_download(repo_id="openai-community/gpt2")

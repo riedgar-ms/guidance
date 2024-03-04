@@ -47,8 +47,7 @@ jobs:
         run: c++ --version
       - name: Show HF caches?
         run: |
-          pwd
-          ls -R ~/.cache/
+          huggingface-cli scan-cache -v
       - name: Install dependencies
         run: |
           source /opt/conda/etc/profile.d/conda.sh
