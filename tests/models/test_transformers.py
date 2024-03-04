@@ -15,8 +15,6 @@ def test_recursion_error():
     """This checks for an infinite recursion error resulting from a terminal node at the root of a grammar."""
     gpt2 = get_model("transformers:gpt2")
 
-    INSTRUCTIONS = "Tweak this proverb to apply to model instructions instead."
-
     # define a guidance program that adapts a proverb
     lm = (
         gpt2
