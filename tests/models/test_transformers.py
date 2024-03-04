@@ -29,7 +29,7 @@ def test_recursion_error():
 
 TRANSFORMER_MODELS = {
     "gpt2": {"device_map": 0},
-    "microsoft/phi-2": {"trust_remote_code": True, "device": 0},
+    "microsoft/phi-2": {"trust_remote_code": True, "device_map": 0},
 }
 
 
