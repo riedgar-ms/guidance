@@ -32,6 +32,12 @@ jobs:
           source /opt/conda/etc/profile.d/conda.sh
           conda activate guidance-311
           python -c "from transformers import pipeline, set_seed; generator = pipeline('text-generation', model='gpt2'); set_seed(42); generator('Hello, I am a language model,', max_length=30, num_return_sequences=5)"
+      - name: Check Pytorch
+        run: |
+          source /opt/conda/etc/profile.d/conda.sh
+          conda activate guidance-311
+          python -c "import torch; torch.cuda.is_available()"
+          python -c "import torch; torch.cuda.get_device_name(0)"
       - name: Show c++
         run: c++ --version
       - name: Install dependencies
