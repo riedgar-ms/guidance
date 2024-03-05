@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/sh -l
 
 # From
 # https://github.com/Azure-Samples/container-apps-ci-cd-runner-tutorial/blob/main/github-actions-runner/entrypoint.sh
