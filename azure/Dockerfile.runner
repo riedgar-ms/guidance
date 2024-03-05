@@ -1,0 +1,12 @@
+FROM guidancegithubacr.azurecr.io/github-actions-base:latest
+
+USER root
+
+# Get the entrypoint script
+COPY scripts/entrypoint.sh ./
+RUN chmod +x ./entrypoint.sh
+
+# Switch to the 'runner' user
+USER runner
+
+ENTRYPOINT ["./entrypoint.sh"]
