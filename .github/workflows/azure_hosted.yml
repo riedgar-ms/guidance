@@ -21,3 +21,8 @@ jobs:
       - name: Check GPU Info
         run: |
           nvidia-smi
+      - name: Show pip packages
+        run: |
+          source /opt/conda/etc/profile.d/conda.sh
+          conda activate guidance-311
+          pip freeze

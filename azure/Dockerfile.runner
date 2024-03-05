@@ -1,4 +1,4 @@
-FROM guidancegithubacr.azurecr.io/github-actions-base:latest
+FROM guidancegithubacr.azurecr.io/github-actions-conda:latest
 
 USER root
 

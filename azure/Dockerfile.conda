@@ -1,0 +1,22 @@
+FROM guidancegithubacr.azurecr.io/github-actions-base:latest
+
+
+# "Install" conda
+COPY --from=continuumio/miniconda3:24.1.2-0 /opt/conda /opt/conda
+
+
+# Switch to the 'runner' user
+USER runner
+
+
+# Set up the conda environment(s)
+ENV PATH=/opt/conda/bin:$PATH
+COPY condaenvs/guidance-311.yaml /tmp/guidance-311.yaml
+COPY scripts/hugging_face_setup.py ./
+
+# Note '.' in 'sh' is the equivalent of 'source' in bash
+RUN . /opt/conda/etc/profile.d/conda.sh && \
+    conda env create --file /tmp/guidance-311.yaml --name guidance-311
+RUN . /opt/conda/etc/profile.d/conda.sh && \
+    conda activate guidance-311 && \
+    python ./hugging_face_setup.py
