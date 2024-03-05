@@ -15,6 +15,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - name: Check System Info
+      - name: Check CPU Info
         run: |
-          cat /proc/cpuinfo
+          cat /proc/cpuinfo | grep "core id|model name"
+      - name: Check GPU Info
+        run: |
+          nvidia-smi
