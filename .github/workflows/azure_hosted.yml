@@ -39,4 +39,4 @@ jobs:
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
       - name: Run tests
         run: |
-          python -m pytest tests/
+          python -m pytest tests/ --duration=20
