@@ -1,13 +1,10 @@
 FROM guidancegithubacr.azurecr.io/github-actions-base:latest
 
-
 # "Install" conda
 COPY --from=continuumio/miniconda3:24.1.2-0 /opt/conda /opt/conda
 
-
 # Switch to the 'runner' user
 USER runner
-
 
 # Set up the conda environment(s)
 ENV PATH=/opt/conda/bin:$PATH
