@@ -121,7 +121,7 @@ def test_empty_pattern():
     assert lm2['test'] == ''
 
 def test_various_regexes():
-    lm = get_model("transformers:gpt2")
+    lm = get_model("transformers:gpt2", device_map=0)
     prompts = ['Hi there', '2 + 2 = ', 'Scott is a', 'I have never seen a more', 'What is the', '?FD32']
     patterns = ['(Scott is a person|Scott is a persimmon)', r'Scott is a persimmon.*\.', r'\d\.*\d+']
     for prompt in prompts:
