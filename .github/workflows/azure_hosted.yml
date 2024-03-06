@@ -15,19 +15,19 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
-      - name: Check CPU Info
+      - name: Show CPU Info
         run: |
           grep -E "core id|model name" /proc/cpuinfo
-      - name: Check GPU Info
+      - name: Show GPU Info
         run: |
           nvidia-smi
       - name: Show pip packages
         run: |
           source /opt/conda/etc/profile.d/conda.sh
-          conda activate guidance-311
+          conda activate $CONDA_ENV_311
           pip freeze
       - name: Check GPU available
         run: |
           source /opt/conda/etc/profile.d/conda.sh
-          conda activate guidance-311
+          conda activate $CONDA_ENV_311
           python -c "import torch; assert torch.cuda.is_available()"
