@@ -33,10 +33,14 @@ jobs:
           python -c "import torch; assert torch.cuda.is_available()"
       - name: Install dependencies
         run: |
+          source /opt/conda/etc/profile.d/conda.sh
+          conda activate $CONDA_ENV_311
           python -m pip install --upgrade pip
           pip install pytest
           pip install -e .[test]
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
       - name: Run tests
         run: |
-          python -m pytest tests/ --duration=20
+          source /opt/conda/etc/profile.d/conda.sh
+          conda activate $CONDA_ENV_311
+          python -m pytest tests/ --durations=20
