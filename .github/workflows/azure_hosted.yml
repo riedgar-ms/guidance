@@ -26,3 +26,8 @@ jobs:
           source /opt/conda/etc/profile.d/conda.sh
           conda activate guidance-311
           pip freeze
+      - name: Check GPU available
+        run: |
+          source /opt/conda/etc/profile.d/conda.sh
+          conda activate guidance-311
+          python -c "import torch; assert torch.cuda.is_available()"
