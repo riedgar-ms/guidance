@@ -1,15 +1,14 @@
-import threading
-import numpy as np
-import queue
-import time
-import tiktoken
-import re
 import logging
-from ._model import Engine, Model, format_pattern, ConstraintException
-from ._tokenizer import Tokenizer
-from ..chat import ChatMLTemplate
+import queue
+import threading
+import time
 
-import warnings
+import numpy as np
+import tiktoken
+
+from ..chat import ChatMLTemplate
+from ._model import ConstraintException, Engine, Model, format_pattern
+from ._tokenizer import Tokenizer
 
 logger = logging.getLogger(__name__)
 
@@ -32,11 +31,13 @@ class GrammarlessTokenizer(Tokenizer):
             # consume one-by-one until we have passed all the special tokens AND gotten a valid token
             i = tokenizer.n_vocab - 1
             byte_tokens = []
+            n_ist_count = 0
             while True:
                 try:
                     bval = tokenizer.decode_single_token_bytes(i)
                     found = True
                 except KeyError:
+                    n_ist_count += 1
                     bval = special_map.get(i, b"<|invalid_special_token|>")
                     found = False
                 byte_tokens.append(bval)
@@ -44,6 +45,7 @@ class GrammarlessTokenizer(Tokenizer):
                 if i < first_special and found:
                     break
                 i -= 1
+            logger.debug(f"Found {n_ist_count} invalid special tokens")
 
             # do the rest of the tokens as a batch
             byte_tokens = tokenizer.decode_tokens_bytes(np.arange(i + 1)) + byte_tokens
