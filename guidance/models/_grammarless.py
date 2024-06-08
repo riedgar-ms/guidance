@@ -127,14 +127,14 @@ class GrammarlessEngine(Engine):
         self.timeout = timeout
 
         # this is where the streaming thread puts results
-        self._data_queue = queue.Queue()
+        self._data_queue: queue.Queue = queue.Queue()
         self._data = b""  # these are the bytes we are ready to use in the main thread
 
         # this is phrased negatively so we can wait for the stop event
-        self._not_running_stream = threading.Event()
-        self._last_call = 0
+        self._not_running_stream: threading.Event = threading.Event()
+        self._last_call = 0.0
         self._num_calls_made = 0
-        self._current_temp = 0
+        self._current_temp = 0.0
         self._last_stream_start = None
 
         self._not_running_stream.set()
@@ -155,6 +155,9 @@ class GrammarlessEngine(Engine):
             )
         # build the Engine
         super().__init__(tokenizer=tokenizer, compute_log_probs=compute_log_probs)
+
+    def _generator(self, prompt: bytes, temperature: float):
+        raise NotImplementedError("Child classes must implement _generator()")
 
     def __call__(self, *args, **kwargs):
         self._num_calls_made = 0  # reset the number of calls count so we only limit the number of calls within a single grammar execution
@@ -194,7 +197,7 @@ class GrammarlessEngine(Engine):
             b""
         )  # so we never get stuck waiting for a running stream to return something
 
-    def _start_new_stream(self, prompt, temperature):
+    def _start_new_stream(self, prompt, temperature: float):
 
         # make sure the display is up to date (since we are about to delay for a while)
         # TODO: how can we handle this better since the engine is now separate from the client?
@@ -227,14 +230,14 @@ class GrammarlessEngine(Engine):
         )
         self._remote_thread.start()
 
-    def _reset_shared_data(self, new_data, temperature):
+    def _reset_shared_data(self, new_data, temperature: float):
         """Should be called by _generator calls to reset the shared data state."""
         if temperature == 0 and self._last_stream_start == new_data:
             raise self._report_failed_match(new_data)
         self._data = new_data
         self._last_stream_start = self._data
 
-    def get_logits(self, token_ids, forced_bytes, current_temp):
+    def get_logits(self, token_ids, forced_bytes: bytes, current_temp: float):
         """Computes the logits for the given token state.
 
         This overrides a method from the Local class that is used to get
@@ -371,13 +374,13 @@ class GrammarlessEngine(Engine):
 
             # we wait for the running stream to put something in the queue
             else:
-                self._last_call = 10e9  # set to essentialy infinity so we don't stop the data stream while we are waiting for it
+                self._last_call = 1e9  # set to essentialy infinity so we don't stop the data stream while we are waiting for it
                 new_bytes = self._data_queue.get()
                 if isinstance(new_bytes, Exception):
                     raise new_bytes
                 self._data += new_bytes
                 # reset out call time to allow the data stream to time out if we happen to be done with it
-                self._last_call = time.time()  
+                self._last_call = time.time()
 
         # # if we don't have the next byte of data yet then we wait for it (from the streaming thread)
         # if len(self._data) == len(prompt):
