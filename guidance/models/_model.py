@@ -1284,8 +1284,8 @@ class Model:
 
     def _run_classifier(self, proposed_generation) -> bool:
         import random
-
-        return random.choice([True, False])
+        triggered = random.choice([True])
+        return triggered
 
     def _run_stateless(self, stateless_function, temperature=0.0, top_p=1.0, n=1):
         assert (
@@ -1315,6 +1315,7 @@ class Model:
             # last_is_generated = False
 
             generation_completed = False
+            classifier_triggered = False
             lm_cached = lm
             while not generation_completed:
                 
@@ -1338,12 +1339,13 @@ class Model:
                         continue
                     delayed_bytes = b""
 
-                    if lm.token_count - lm_cached.token_count >= RECLASSIFY_TOKEN_COUNT:
+                    need_reclassify = lm.token_count - lm_cached.token_count >= RECLASSIFY_TOKEN_COUNT
+
+                    if need_reclassify:
                         logger.info(f"Triggering reclassification {lm.token_count=} {lm_cached.token_count=}")
 
-                        if self._run_classifier(lm + new_text):
-                            lm_cached = lm
-                        else:
+                        classifier_triggered = self._run_classifier(lm + new_text)
+                        if classifier_triggered:
                             logger.info(f"Reclassification of '{lm+new_text}' tripped classifier. Resetting")
                             lm = lm_cached
                             break
@@ -1394,7 +1396,12 @@ class Model:
                                     pass
                                 lm._variables[k] = v
                                 lm._variables_log_probs[k] = chunk.capture_group_log_probs[k]
-                generation_completed = True
+
+                    if need_reclassify:
+                        # If we got here, we didn't break iteration on the classifier
+                        lm_cached = lm
+
+                generation_completed = not classifier_triggered
                 # if len(chunk.capture_groups) > 0:
                 #     for k in chunk.capture_groups:
                 #         v = chunk.capture_groups[k]
