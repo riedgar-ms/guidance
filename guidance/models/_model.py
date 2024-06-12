@@ -1301,11 +1301,10 @@ class Model:
         # replace ModelVariables with their actual values (note we save what we replaced so we can restore it later)
         replacements = replace_model_variables(stateless_function, self)
 
-        # start the generation stream
-        gen_obj = self.engine(self._current_prompt(), stateless_function)
-
         # we will return a new extended version of ourselves, which we track as `lm`
         lm = self
+
+        RECLASSIFY_TOKEN_COUNT = 10
 
         # single generation
         if n == 1:
@@ -1316,8 +1315,13 @@ class Model:
             # last_is_generated = False
 
             generation_completed = False
+            lm_cached = lm
             while not generation_completed:
+                
+                # start the generation stream
+                gen_obj = self.engine(self._current_prompt(), stateless_function)
 
+                logger.info(f"Iterating through gen_obj")
                 for chunk in gen_obj:
 
                     # we make everything full probability if we are not computing uncertainty
@@ -1333,6 +1337,16 @@ class Model:
                         delayed_bytes = chunk.new_bytes
                         continue
                     delayed_bytes = b""
+
+                    if lm.token_count - lm_cached.token_count >= RECLASSIFY_TOKEN_COUNT:
+                        logger.info(f"Triggering reclassification {lm.token_count=} {lm_cached.token_count=}")
+
+                        if self._run_classifier(lm + new_text):
+                            lm_cached = lm
+                        else:
+                            logger.info(f"Reclassification of '{lm+new_text}' tripped classifier. Resetting")
+                            lm = lm_cached
+                            break
 
                     if len(chunk.new_bytes) > 0:
                         generated_value += new_text

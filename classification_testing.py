@@ -1,4 +1,8 @@
+import logging
+
 import guidance
+
+logging.basicConfig(level=logging.INFO)
 
 lm = guidance.models.Transformers("microsoft/Phi-3-mini-4k-instruct", trust_remote_code=True)
 
