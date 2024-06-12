@@ -1282,6 +1282,11 @@ class Model:
 
     #         return self
 
+    def _run_classifier(self, proposed_generation) -> bool:
+        import random
+
+        return random.choice([True, False])
+
     def _run_stateless(self, stateless_function, temperature=0.0, top_p=1.0, n=1):
         assert (
             Model._grammar_only == 0
@@ -1309,73 +1314,77 @@ class Model:
 
             delayed_bytes = b""
             # last_is_generated = False
-            for chunk in gen_obj:
 
-                # we make everything full probability if we are not computing uncertainty
-                # if not self.engine.compute_log_probs:
-                #     chunk.new_bytes_prob = 1.0
+            generation_completed = False
+            while not generation_completed:
 
-                # convert the bytes to a string (delaying if we don't yet have a valid unicode string)
-                lm.token_count += chunk.new_token_count
-                chunk.new_bytes = delayed_bytes + chunk.new_bytes
-                try:
-                    new_text = chunk.new_bytes.decode("utf8")
-                except UnicodeDecodeError:
-                    delayed_bytes = chunk.new_bytes
-                    continue
-                delayed_bytes = b""
+                for chunk in gen_obj:
 
-                if len(chunk.new_bytes) > 0:
-                    generated_value += new_text
-                    if chunk.is_generated:
-                        lm += f"<||_html:<span style='background-color: rgba({165*(1-chunk.new_bytes_prob) + 0}, {165*chunk.new_bytes_prob + 0}, 0, {0.15}); border-radius: 3px;' title='{chunk.new_bytes_prob}'>_||>"
-                    lm += new_text
-                    if chunk.is_generated:
-                        lm += "<||_html:</span>_||>"
+                    # we make everything full probability if we are not computing uncertainty
+                    # if not self.engine.compute_log_probs:
+                    #     chunk.new_bytes_prob = 1.0
 
-                # last_is_generated = chunk.is_generated
+                    # convert the bytes to a string (delaying if we don't yet have a valid unicode string)
+                    lm.token_count += chunk.new_token_count
+                    chunk.new_bytes = delayed_bytes + chunk.new_bytes
+                    try:
+                        new_text = chunk.new_bytes.decode("utf8")
+                    except UnicodeDecodeError:
+                        delayed_bytes = chunk.new_bytes
+                        continue
+                    delayed_bytes = b""
 
-                if len(chunk.capture_groups) > 0:
-                    for k in chunk.capture_groups:
-                        v = chunk.capture_groups[k]
+                    if len(chunk.new_bytes) > 0:
+                        generated_value += new_text
+                        if chunk.is_generated:
+                            lm += f"<||_html:<span style='background-color: rgba({165*(1-chunk.new_bytes_prob) + 0}, {165*chunk.new_bytes_prob + 0}, 0, {0.15}); border-radius: 3px;' title='{chunk.new_bytes_prob}'>_||>"
+                        lm += new_text
+                        if chunk.is_generated:
+                            lm += "<||_html:</span>_||>"
 
-                        # see if we are in a list_append mode
-                        if isinstance(v, list):
-                            for i, inner_v in enumerate(v):
+                    # last_is_generated = chunk.is_generated
+
+                    if len(chunk.capture_groups) > 0:
+                        for k in chunk.capture_groups:
+                            v = chunk.capture_groups[k]
+
+                            # see if we are in a list_append mode
+                            if isinstance(v, list):
+                                for i, inner_v in enumerate(v):
+                                    # convert to a string if possible
+                                    # TODO: will need to not just always do this once we support images etc.
+                                    try:
+                                        inner_v = (
+                                            inner_v.decode("utf8")
+                                            if isinstance(inner_v, bytes)
+                                            else inner_v
+                                        )
+                                    except UnicodeDecodeError:
+                                        pass
+
+                                    if k not in lm or not isinstance(lm._variables[k], list):
+                                        lm._variables[k] = []
+                                        lm._variables_log_probs[k] = []
+                                    lm._variables[k].append(inner_v)
+                                    lm._variables_log_probs[k].append(
+                                        chunk.capture_group_log_probs[k][i]
+                                    )
+
+                            # ...or standard assignment mode
+                            else:
                                 # convert to a string if possible
                                 # TODO: will need to not just always do this once we support images etc.
                                 try:
-                                    inner_v = (
-                                        inner_v.decode("utf8")
-                                        if isinstance(inner_v, bytes)
-                                        else inner_v
-                                    )
+                                    v = v.decode("utf8") if isinstance(v, bytes) else v
                                 except UnicodeDecodeError:
                                     pass
-
-                                if k not in lm or not isinstance(lm._variables[k], list):
-                                    lm._variables[k] = []
-                                    lm._variables_log_probs[k] = []
-                                lm._variables[k].append(inner_v)
-                                lm._variables_log_probs[k].append(
-                                    chunk.capture_group_log_probs[k][i]
-                                )
-
-                        # ...or standard assignment mode
-                        else:
-                            # convert to a string if possible
-                            # TODO: will need to not just always do this once we support images etc.
-                            try:
-                                v = v.decode("utf8") if isinstance(v, bytes) else v
-                            except UnicodeDecodeError:
-                                pass
-                            lm._variables[k] = v
-                            lm._variables_log_probs[k] = chunk.capture_group_log_probs[k]
-
-            # if len(chunk.capture_groups) > 0:
-            #     for k in chunk.capture_groups:
-            #         v = chunk.capture_groups[k]
-            #         lm[k] = v.decode("utf8") if isinstance(v, bytes) else v
+                                lm._variables[k] = v
+                                lm._variables_log_probs[k] = chunk.capture_group_log_probs[k]
+                generation_completed = True
+                # if len(chunk.capture_groups) > 0:
+                #     for k in chunk.capture_groups:
+                #         v = chunk.capture_groups[k]
+                #         lm[k] = v.decode("utf8") if isinstance(v, bytes) else v
         else:
             raise ValueError(f"_run_stateless n>1 not supported")
 
