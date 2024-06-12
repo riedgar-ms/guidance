@@ -1284,7 +1284,7 @@ class Model:
 
     def _run_classifier(self, proposed_generation) -> bool:
         import random
-        triggered = random.choice([True])
+        triggered = random.choice([True, False])
         return triggered
 
     def _run_stateless(self, stateless_function, temperature=0.0, top_p=1.0, n=1):
@@ -1320,9 +1320,10 @@ class Model:
             while not generation_completed:
                 
                 # start the generation stream
-                gen_obj = self.engine(self._current_prompt(), stateless_function)
+                gen_obj = self.engine(lm._current_prompt(), stateless_function)
 
-                logger.info(f"Iterating through gen_obj")
+                logger.info(f"{lm._current_prompt()=}")
+                logger.info(f"----- Iterating through gen_obj")
                 for chunk in gen_obj:
 
                     # we make everything full probability if we are not computing uncertainty
@@ -1346,7 +1347,7 @@ class Model:
 
                         classifier_triggered = self._run_classifier(lm + new_text)
                         if classifier_triggered:
-                            logger.info(f"Reclassification of '{lm+new_text}' tripped classifier. Resetting")
+                            logger.info(f"Reclassification of '{lm+new_text}' tripped classifier. RESETTING ===")
                             lm = lm_cached
                             break
 
