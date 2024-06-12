@@ -1376,6 +1376,8 @@ class Model:
             #     for k in chunk.capture_groups:
             #         v = chunk.capture_groups[k]
             #         lm[k] = v.decode("utf8") if isinstance(v, bytes) else v
+        else:
+            raise ValueError(f"_run_stateless n>1 not supported")
 
         unreplace_model_variables(replacements)
 
