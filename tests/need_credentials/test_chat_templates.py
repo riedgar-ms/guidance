@@ -1,6 +1,7 @@
 import pytest
 
-from guidance.chat import CHAT_TEMPLATE_CACHE
+from guidance import models, assistant, system, user
+from guidance.chat import CHAT_TEMPLATE_CACHE, load_template_class
 import transformers
 
 from ..utils import env_or_fail
@@ -36,3 +37,27 @@ def test_popular_models_in_cache(model_info):
 # once I hook up the new ChatTemplate to guidance.models.Transformers and guidance.models.LlamaCPP, we can do this
 
 
+@pytest.mark.parametrize('model_id', ["microsoft/Phi-3-mini-4k-instruct"])
+def test_popular_models_roles(model_id):
+    hf_token = env_or_fail("HF_TOKEN")
+    tokenizer = transformers.AutoTokenizer.from_pretrained(model_id, token=hf_token)
+
+    lm = models.Transformers(model_id, trust_remote_code=True)#models.Mock()
+    # lm.engine.tokenizer._chat_template = load_template_class(tokenizer.chat_template)
+
+    messages = [
+        dict(role="assistant", content="You are something"),
+        dict(role="user", content="hello")
+    ]
+
+    direct_application = tokenizer.apply_chat_template(messages, tokenize=False)
+
+    with assistant():
+        lm += "You are something"
+    with user():
+        lm += "hello"
+
+    print(f"{direct_application=}")
+    print(f"{str(lm)=}")
+
+    assert str(lm) == direct_application
