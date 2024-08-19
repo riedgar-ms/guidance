@@ -1859,6 +1859,12 @@ class TestBigSchema:
                     result["anyOf"] = self._rewrite_schema(v)
                 elif k == "discriminator":
                     pass
+                elif k == "pattern":
+                    # Anchors are an issue
+                    if v.startswith("^"):
+                        v = v[1:]
+                    if v.endswith("$"):
+                        v = v[:-2]
                 else:
                     if isinstance(v, dict):
                         result[k] = self._rewrite_schema(v)
