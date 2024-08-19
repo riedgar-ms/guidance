@@ -259,9 +259,7 @@ class TestQuantifiers:
             ),  # More than the maximum 'a's before 'b'
         ],
     )
-    def test_quantifiers_failure(
-        self, pattern, string, good_bytes, failure_byte, allowed_bytes
-    ):
+    def test_quantifiers_failure(self, pattern, string, good_bytes, failure_byte, allowed_bytes):
         check_match_failure(
             bad_string=string,
             good_bytes=good_bytes,
@@ -378,9 +376,7 @@ class TestAlternations:
             ),  # 't' should be forced
         ],
     )
-    def test_alternations_failures(
-        self, pattern, string, good_bytes, failure_byte, allowed_bytes
-    ):
+    def test_alternations_failures(self, pattern, string, good_bytes, failure_byte, allowed_bytes):
         check_match_failure(
             bad_string=string,
             good_bytes=good_bytes,
@@ -413,9 +409,7 @@ class TestDot:
             ),
         ],
     )
-    def test_dot_failures(
-        self, pattern, string, good_bytes, failure_byte, allowed_bytes
-    ):
+    def test_dot_failures(self, pattern, string, good_bytes, failure_byte, allowed_bytes):
         check_match_failure(
             bad_string=string,
             good_bytes=good_bytes,
@@ -515,3 +509,12 @@ class TestSpecialCharacters:
             allowed_bytes=allowed_bytes,
             grammar=regex(pattern),
         )
+
+
+class TestRealPatterns:
+    @pytest.mark.parametrize("string", ["0", "c69bf455-875f-41ba-a6e3-6b802deb96f5"])
+    def test_fhir_id(self, string: str):
+        pattern = "^[A-Za-z0-9\\-\\.]{1,64}$"
+        stop_char = chr(7)
+        grammar_callable = partial(regex, pattern=pattern)
+        generate_and_check(grammar_callable, string, stop_char=stop_char)
