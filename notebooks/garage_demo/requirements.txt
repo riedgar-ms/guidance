@@ -1,0 +1,5 @@
+accelerate
+guidance[schemas]
+jupyter
+torch
+transformers
