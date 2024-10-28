@@ -1,5 +1,6 @@
 accelerate
 guidance[schemas]
 jupyter
+sentencepiece
 torch
 transformers
