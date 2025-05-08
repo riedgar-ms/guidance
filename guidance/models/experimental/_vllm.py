@@ -1,17 +1,9 @@
-from typing import Iterator, Optional, TYPE_CHECKING
-import wave
-import base64
-from io import BytesIO
-
-if TYPE_CHECKING:
-    from openai.types.chat import ChatCompletionChunk
+from typing import Iterator, Optional
 
 from ..._ast import GrammarNode
 from ...trace import OutputAttr, TextOutput
-from ...trace._trace import AudioOutput
 from .._openai_base import (
     BaseOpenAIInterpreter,
-    AssistantAudio,
 )
 from .._base import Model
 

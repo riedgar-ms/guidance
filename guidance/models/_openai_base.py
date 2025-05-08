@@ -2,13 +2,14 @@ import base64
 import wave
 from copy import deepcopy
 from io import BytesIO
-from typing import TYPE_CHECKING, Iterator, Literal, Optional, Union
+from typing import TYPE_CHECKING, Iterator, Literal, Optional, Union, cast
 
 from pydantic import BaseModel, Discriminator, Field, TypeAdapter
 from typing_extensions import Annotated, assert_never
 
 from .._ast import (
     ASTNode,
+    AudioBlob,
     GenAudio,
     ImageBlob,
     ImageUrl,
@@ -52,7 +53,7 @@ class AssistantAudioMessage(BaseModel):
 
 
 class TextContent(BaseModel):
-    type: Literal["text"]
+    type: Literal["text"] = "text"
     text: str
 
 
@@ -62,7 +63,7 @@ class InputAudio(BaseModel):
 
 
 class AudioContent(BaseModel):
-    type: Literal["input_audio"]
+    type: Literal["input_audio"] = "input_audio"
     input_audio: InputAudio
 
 
@@ -71,7 +72,7 @@ class ImageUrlContentInner(BaseModel):
 
 
 class ImageUrlContent(BaseModel):
-    type: Literal["image_url"]
+    type: Literal["image_url"] = "image_url"
     image_url: ImageUrlContentInner
 
 
@@ -79,7 +80,7 @@ Content = Annotated[Union[TextContent, AudioContent, ImageUrlContent], Discrimin
 
 
 class ContentMessage(BaseModel):
-    role: Literal["system", "user", "assistant"]
+    role: str
     content: list[Content]
 
 
@@ -97,7 +98,7 @@ class OpenAIState(State):
         if len(self.content) > 0 and isinstance(self.content[-1], TextContent):
             self.content[-1].text += text
         else:
-            self.content.append(TextContent(type="text", text=text))
+            self.content.append(TextContent(text=text))
 
     def get_active_message(self) -> Optional[Message]:
         if self.active_role is None:
@@ -105,8 +106,9 @@ class OpenAIState(State):
         if self.content and self.audio:
             raise ValueError("Cannot have both content and audio")
         if self.audio:
+            assert self.active_role == "assistant"
             return AssistantAudioMessage(
-                role=self.active_role,
+                role=cast(Literal["assistant"], self.active_role),
                 audio=self.audio,
             )
         elif self.content:
@@ -183,7 +185,9 @@ class BaseOpenAIInterpreter(Interpreter[OpenAIState]):
         yield TextOutput(value=get_role_start(node.role), is_input=True)
 
     def role_end(self, node: RoleEnd, **kwargs) -> Iterator[OutputAttr]:
-        self.state.messages.append(self.state.get_active_message())
+        active_message = self.state.get_active_message()
+        if active_message is not None:
+            self.state.messages.append(active_message)
         self.state.audio = None
         self.state.content = []
         self.state.active_role = None
@@ -234,36 +238,40 @@ class BaseOpenAIInterpreter(Interpreter[OpenAIState]):
                     continue
                 self.state.apply_text(content)
                 if getattr(choice, "logprobs", None) is not None:
+                    assert choice.logprobs is not None
+                    assert choice.logprobs.content is not None
+                    assert len(choice.logprobs.content) > 0
                     # TODO: actually get tokens from this and be less lazy
                     prob = 2.718 ** choice.logprobs.content[0].logprob
                 else:
                     prob = float("nan")
                 yield TextOutput(value=delta.content, is_generated=True, prob=prob)
             elif getattr(delta, "audio", None) is not None:
+                delta_audio = delta.audio # type: ignore[attr-defined]
                 transcript_chunk: Optional[str] = None
                 if audio is None:
-                    assert delta.audio.get("id") is not None
+                    assert delta_audio.get("id") is not None
                     audio = AssistantAudio(
-                        id=delta.audio["id"],
-                        expires_at=delta.audio.get("expires_at", 0),  # ?
-                        transcript=delta.audio.get("transcript", ""),
-                        data=delta.audio.get("data", ""),
+                        id=delta_audio["id"],
+                        expires_at=delta_audio.get("expires_at", 0),  # ?
+                        transcript=delta_audio.get("transcript", ""),
+                        data=delta_audio.get("data", ""),
                     )
-                    transcript_chunk = delta.audio.get("transcript")
+                    transcript_chunk = delta_audio.get("transcript")
                 else:
-                    assert delta.audio.get("id") is None or delta.audio["id"] == audio.id
-                    if delta.audio.get("data") is not None:
-                        audio.data += delta.audio["data"]
-                    if delta.audio.get("transcript") is not None:
-                        audio.transcript += delta.audio["transcript"]
-                        transcript_chunk = delta.audio["transcript"]
-                    if delta.audio.get("expires_at") is not None:
+                    assert delta_audio.get("id") is None or delta_audio["id"] == audio.id
+                    if delta_audio.get("data") is not None:
+                        audio.data += delta_audio["data"]
+                    if delta_audio.get("transcript") is not None:
+                        audio.transcript += delta_audio["transcript"]
+                        transcript_chunk = delta_audio["transcript"]
+                    if delta_audio.get("expires_at") is not None:
                         assert audio.expires_at == 0
-                        audio.expires_at = delta.audio["expires_at"]
+                        audio.expires_at = delta_audio["expires_at"]
                 if transcript_chunk is not None:
                     # Why not give the users some transcript? :)
                     yield TextOutput(
-                        value=delta.audio["transcript"],
+                        value=delta_audio["transcript"],
                         is_generated=True,
                     )
             elif delta.function_call is not None:
@@ -305,7 +313,7 @@ class BaseOpenAIInterpreter(Interpreter[OpenAIState]):
         return result
 
 
-class OpenAIRuleMixin:
+class OpenAIRuleMixin(Interpreter[OpenAIState]):
     def rule(self, node: RuleNode, **kwargs) -> Iterator[OutputAttr]:
         if node.stop:
             raise ValueError("Stop condition not yet supported for OpenAI")
@@ -339,7 +347,7 @@ class OpenAIRuleMixin:
             yield from chunks
 
 
-class OpenAIRegexMixin:
+class OpenAIRegexMixin(BaseOpenAIInterpreter):
     def regex(self, node: RegexNode, **kwargs) -> Iterator[OutputAttr]:
         if node.regex is not None:
             raise ValueError("Regex not yet supported for OpenAI")
@@ -347,7 +355,7 @@ class OpenAIRegexMixin:
         return self._run(**kwargs)
 
 
-class OpenAIJSONMixin:
+class OpenAIJSONMixin(BaseOpenAIInterpreter):
     def json(self, node: JsonNode, **kwargs) -> Iterator[OutputAttr]:
         return self._run(
             response_format={
@@ -362,7 +370,7 @@ class OpenAIJSONMixin:
         )
 
 
-class OpenAIImageMixin:
+class OpenAIImageMixin(BaseOpenAIInterpreter):
     def image_blob(self, node: ImageBlob, **kwargs) -> Iterator[OutputAttr]:
         try:
             import PIL.Image
@@ -381,30 +389,35 @@ class OpenAIImageMixin:
 
         mime_type = f"image/{format.lower()}"
         self.state.content.append(
-            {"type": "image_url", "image_url": {"url": f"data:{mime_type};base64,{node.data}"}}
+            ImageUrlContent(
+                image_url=ImageUrlContentInner(
+                    url=f"data:{mime_type};base64,{node.data}"
+                ),
+            )
         )
-        yield ImageOutput(value=node.data, input=True)
+        yield ImageOutput(value=node.data, is_input=True)
 
     def image_url(self, node: ImageUrl, **kwargs) -> Iterator[OutputAttr]:
-        self.state.content.append({"type": "image_url", "image_url": {"url": node.url}})
+        self.state.content.append(
+            ImageUrlContent(image_url=ImageUrlContentInner(url=node.url))
+        )
         image_bytes = bytes_from(node.url, allow_local=False)
         base64_string = base64.b64encode(image_bytes).decode("utf-8")
-        yield ImageOutput(value=base64_string, input=True)
+        yield ImageOutput(value=base64_string, is_input=True)
 
 
-class OpenAIAudioMixin:
-    def audio_blob(self, node: ImageBlob, **kwargs) -> Iterator[OutputAttr]:
+class OpenAIAudioMixin(BaseOpenAIInterpreter):
+    def audio_blob(self, node: AudioBlob, **kwargs) -> Iterator[OutputAttr]:
         format = "wav"  # TODO: infer from node
         self.state.content.append(
             AudioContent(
-                type="input_audio",
                 input_audio=InputAudio(
                     data=node.data,
                     format=format,
                 ),
             )
         )
-        yield AudioOutput(value=node.data, format=format, input=True)
+        yield AudioOutput(value=node.data, format=format, is_input=True)
 
     def gen_audio(self, node: GenAudio, **kwargs) -> Iterator[OutputAttr]:
         yield from self._run(

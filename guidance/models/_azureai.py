@@ -129,9 +129,9 @@ def create_azure_openai_model(
     elif (
         model_name and (model_name.startswith("gpt-4o") or model_name.startswith("o1"))
     ) or has_image_support:
-        interpreter_cls = AzureOpenAIImageInterpreter
+        interpreter_cls = AzureOpenAIImageInterpreter # type: ignore[assignment]
     else:
-        interpreter_cls = AzureOpenAIInterpreter
+        interpreter_cls = AzureOpenAIInterpreter # type: ignore[assignment]
 
     interpreter = interpreter_cls(
         azure_endpoint=azure_endpoint,
