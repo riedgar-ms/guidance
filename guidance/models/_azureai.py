@@ -246,7 +246,7 @@ def create_azure_aifoundry_model(
             "Please install the azure-core package using `pip install -U azure-core` in order to use guidance.models.AzureAI!"
         )
 
-    credential: AzureKeyCredential | TokenCredential | None = None
+    credential: Union[AzureKeyCredential, TokenCredential, None] = None
     if api_key and token_credential:
         raise ValueError("Specify either api_key or token_credential")
     elif api_key:
