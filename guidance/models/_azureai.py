@@ -78,7 +78,7 @@ def create_azure_openai_model(
     azure_deployment: str,
     echo: bool = True,
     *,
-    model_name: Optional[str] = None,
+    model_name: str,
     api_version: Optional[str] = None,
     api_key: Optional[str] = None,
     azure_ad_token: Optional[str] = None,
@@ -218,7 +218,7 @@ def create_azure_aifoundry_model(
     azure_endpoint: str,
     echo: bool = True,
     *,
-    model_name: Optional[str] = None,
+    model_name: str,
     api_key: Optional[str] = None,
     token_credential: Optional["TokenCredential"] = None,
 ) -> Model:
