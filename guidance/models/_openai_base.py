@@ -150,6 +150,40 @@ class OpenAIState(State):
                 s += get_role_end(message.role)
         return s
 
+from typing import ContextManager
+from abc import ABC, abstractmethod
+class BaseOpenAIClientWrapper(ABC):
+    @abstractmethod
+    def streaming_chat_completions(
+        self,
+        model: str,
+        messages: list[Message],
+        log_probs: bool,
+        **kwargs,
+    ) -> ContextManager[Iterator["ChatCompletionChunk"]]:
+        """Streaming chat completions."""
+        raise NotImplementedError("This method should be implemented by subclasses.")
+
+
+class OpenAIClientWrapper(BaseOpenAIClientWrapper):
+    def __init__(self, client: "openai.OpenAI"):
+        self.client = client
+
+    def streaming_chat_completions(
+        self,
+        model: str,
+        messages: list[Message],
+        log_probs: bool,
+        **kwargs,
+    ) -> ContextManager[Iterator["ChatCompletionChunk"]]:
+        """Streaming chat completions."""
+        return self.client.chat.completions.create(
+            model=model,
+            messages=TypeAdapter(list[Message]).dump_python(messages),  # type: ignore[arg-type]
+            logprobs=log_probs,
+            stream=True,
+            **kwargs,
+        )
 
 class BaseOpenAIInterpreter(Interpreter[OpenAIState]):
     """Base class for interacting with OpenAI models."""
@@ -159,7 +193,7 @@ class BaseOpenAIInterpreter(Interpreter[OpenAIState]):
     def __init__(
         self,
         model: str,
-        client: "openai.OpenAI",
+        client: BaseOpenAIClientWrapper,
     ):
         try:
             import openai
@@ -212,7 +246,7 @@ class BaseOpenAIInterpreter(Interpreter[OpenAIState]):
                 f"OpenAI models do not support pre-filled assistant messages: got data {self.state.content}."
             )
 
-        with self.client.chat.completions.create(
+        with self.client.streaming_chat_completions(
             model=self.model,
             messages=TypeAdapter(list[Message]).dump_python(self.state.messages),  # type: ignore[arg-type]
             logprobs=self.log_probs,
