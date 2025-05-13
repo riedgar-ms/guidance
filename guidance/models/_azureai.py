@@ -1,16 +1,17 @@
 import logging
 
-from typing import Callable, Iterator, Optional, Union, TYPE_CHECKING
+from typing import Callable, Iterator, Optional, Union, TYPE_CHECKING, cast, ContextManager
 
 from pydantic import TypeAdapter
 
 from .._ast import (
     JsonNode,
-    RuleNode,
 )
 from ._base import Model
 from ._openai_base import (
     BaseOpenAIInterpreter,
+    BaseOpenAIClientWrapper,
+    OpenAIClientWrapper,
     OpenAIAudioMixin,
     OpenAIImageMixin,
     OpenAIRuleMixin,
@@ -22,6 +23,8 @@ from ..trace import OutputAttr
 
 if TYPE_CHECKING:
     from azure.core.credentials import AzureKeyCredential, TokenCredential
+    import azure.ai.inference
+    from openai.types.chat import ChatCompletionChunk
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +61,7 @@ class AzureOpenAIInterpreter(
             azure_ad_token_provider=azure_ad_token_provider,
             **kwargs,
         )
-        super().__init__(model_name, client)
+        super().__init__(model=model_name, client=OpenAIClientWrapper(client))
 
 
 class AzureOpenAIAudioInterpreter(OpenAIAudioMixin, AzureOpenAIInterpreter):
@@ -78,7 +81,7 @@ def create_azure_openai_model(
     azure_deployment: str,
     echo: bool = True,
     *,
-    model_name: Optional[str] = None,
+    model_name: str,
     api_version: Optional[str] = None,
     api_key: Optional[str] = None,
     azure_ad_token: Optional[str] = None,
@@ -129,9 +132,9 @@ def create_azure_openai_model(
     elif (
         model_name and (model_name.startswith("gpt-4o") or model_name.startswith("o1"))
     ) or has_image_support:
-        interpreter_cls = AzureOpenAIImageInterpreter
+        interpreter_cls = AzureOpenAIImageInterpreter # type: ignore[assignment]
     else:
-        interpreter_cls = AzureOpenAIInterpreter
+        interpreter_cls = AzureOpenAIInterpreter # type: ignore[assignment]
 
     interpreter = interpreter_cls(
         azure_endpoint=azure_endpoint,
@@ -148,6 +151,34 @@ def create_azure_openai_model(
 
     return model
 
+class AzureClientWrapper(BaseOpenAIClientWrapper):
+    def __init__(self, client: "azure.ai.inference.ChatCompletionsClient"):
+        self.client = client
+
+    def streaming_chat_completions(
+        self,
+        model: str,
+        messages: list[Message],
+        log_probs: Optional[int] = None,
+        **kwargs,
+    ) -> ContextManager[Iterator["ChatCompletionChunk"]]:
+        request = self.client.complete(
+            body={
+                "model": model,
+                "messages": TypeAdapter(list[Message]).dump_python(messages),
+                "log_probs": log_probs,
+                "stream": True,
+                **kwargs,
+            },
+            headers={
+                "extra-parameters": "pass-through",
+            },
+        )
+        # It's at least... "mostly" compliant with the OpenAI API?
+        return cast(
+            ContextManager[Iterator["ChatCompletionChunk"]],
+            request,
+        )
 
 class AzureInferenceInterpreter(
     OpenAIRuleMixin, OpenAIJSONMixin, OpenAIRegexMixin, BaseOpenAIInterpreter
@@ -169,39 +200,8 @@ class AzureInferenceInterpreter(
             endpoint=endpoint,
             credential=credential,
         )
-        super().__init__(client=client, model=model_name)
+        super().__init__(model=model_name, client=AzureClientWrapper(client))
 
-    def _run(self, **kwargs) -> Iterator[OutputAttr]:
-        if self.state.active_role is None:
-            # Should never happen?
-            raise ValueError(
-                "OpenAI models require chat blocks (e.g. use `with assistant(): ...`)"
-            )
-        if self.state.active_role != "assistant":
-            raise ValueError(
-                "OpenAI models can only generate as the assistant (i.e. inside of `with assistant(): ...`)"
-            )
-        if self.state.content:
-            raise ValueError(
-                f"OpenAI models do not support pre-filled assistant messages: got data {self.state.content}."
-            )
-
-        with self.client.complete(
-            body={
-                "messages": TypeAdapter(list[Message]).dump_python(self.state.messages),
-                "log_probs": self.log_probs,
-                "stream": True,
-                "model": self.model,
-                **kwargs,
-            },
-            headers={
-                "extra-parameters": "pass-through",
-            },
-        ) as chunks:
-            yield from self._handle_stream(chunks)
-
-    #    def rule(self, node: RuleNode, **kwargs) -> Iterator[OutputAttr]:
-    #        raise ValueError("Rule nodes are not supported for Azure Inference")
 
     def json(self, node: JsonNode, **kwargs) -> Iterator[OutputAttr]:
         return self._run(
@@ -218,7 +218,7 @@ def create_azure_aifoundry_model(
     azure_endpoint: str,
     echo: bool = True,
     *,
-    model_name: Optional[str] = None,
+    model_name: str,
     api_key: Optional[str] = None,
     token_credential: Optional["TokenCredential"] = None,
 ) -> Model:
@@ -246,7 +246,7 @@ def create_azure_aifoundry_model(
             "Please install the azure-core package using `pip install -U azure-core` in order to use guidance.models.AzureAI!"
         )
 
-    credential: AzureKeyCredential | TokenCredential | None = None
+    credential: Union[AzureKeyCredential, TokenCredential, None] = None
     if api_key and token_credential:
         raise ValueError("Specify either api_key or token_credential")
     elif api_key:
