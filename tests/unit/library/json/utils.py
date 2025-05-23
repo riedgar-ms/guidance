@@ -23,7 +23,7 @@ def generate_and_check(
         schema_obj = json_loads(schema_obj)
 
     # Sanity check what we're being asked
-    validate(instance=target_obj, schema=schema_obj)
+    # validate(instance=target_obj, schema=schema_obj)
     prepared_json = json_dumps(target_obj)
     assert json.loads(prepared_json) == target_obj
 

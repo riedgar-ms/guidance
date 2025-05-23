@@ -28,6 +28,14 @@ def test_null():
 
     generate_and_check(target_obj, schema_obj)
 
+def test_bad_items():
+    schema = """{"type": "array", "items" : { "type" : "integer" } , "maxItems" : 2}"""
+    schema_obj = json.loads(schema)
+
+    bad_array = [0,1,2]
+    generate_and_check(bad_array, schema_obj)
+
+
 
 @pytest.mark.parametrize("target_obj", [True, False])
 @pytest.mark.parametrize("temperature", [None, 0.1, 1])
