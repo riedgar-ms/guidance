@@ -88,3 +88,9 @@ class UserRequest(BaseModel):
 
 
 print(json.dumps(UserRequest.model_json_schema(), indent=4))
+
+
+class ModelResponse(BaseModel):
+    output: list[Content] = Field(default_factory=list)
+    captures: dict[str, Any] = Field(default_factory=dict)
+    model_config = ConfigDict(arbitrary_types_allowed=True)
